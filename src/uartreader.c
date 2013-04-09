@@ -48,10 +48,11 @@ void uartreader_init(uartreader_init_t * init)
     m_evt_handler = init->evt_handler;
     m_buffer_index = 0;
 
-    NRF_UART0->ENABLE = UART_ENABLE_ENABLE_Enabled << UART_ENABLE_ENABLE_Pos;
- 
     NRF_UART0->INTENSET = UART_INTENSET_TXDRDY_Enabled << UART_INTENSET_TXDRDY_Pos;
     NVIC_EnableIRQ(UART0_IRQn);
+
+    NRF_UART0->ENABLE = UART_ENABLE_ENABLE_Enabled << UART_ENABLE_ENABLE_Pos;
+    NRF_UART0->TASKS_STARTRX = 1;
 }
 
 void uartreader_send_reply(uartreader_rsp_t rsp)
