@@ -115,3 +115,11 @@ TEST(uartreader, test_uartreader_calls_handler_on_max_length)
     }
     CHECK_TRUE(is_handler_called);
 }
+
+TEST(uartreader, test_writes_data_to_txd)
+{
+	uartreader_send_reply(SUCCESS);
+
+	LONGS_EQUAL(SUCCESS, NRF_UART0->TXD);
+	LONGS_EQUAL(1, NRF_UART0->TASKS_STARTTX);
+}

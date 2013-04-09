@@ -57,4 +57,7 @@ void uartreader_init(uartreader_init_t * init)
 void uartreader_send_reply(uartreader_rsp_t rsp)
 {
 
+	NRF_UART0->TXD = (uint8_t) rsp;
+
+	NRF_UART0->TASKS_STARTTX = 1;
 }

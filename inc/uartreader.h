@@ -38,6 +38,6 @@ typedef struct
 } uartreader_init_t;
 
 void uartreader_init(uartreader_init_t * init);
-void uartreader_send(uartreader_rsp_t rsp);
+void uartreader_send_reply(uartreader_rsp_t rsp);
 
 #endif
