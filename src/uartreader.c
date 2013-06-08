@@ -19,12 +19,12 @@ void UART0_IRQHandler(void)
         }
         else
         {
-            m_evt.data[m_buffer_index] = NRF_UART0->RXD;
+            m_evt.data[m_buffer_index-1] = NRF_UART0->RXD;
 
-            if (m_evt.data[m_buffer_index] == '\n' || 
+            if (m_evt.data[m_buffer_index-1] == '\n' || 
                 m_buffer_index >= UARTREADER_MAX_LEN-1)
             {
-                m_evt.len = m_buffer_index;
+                m_evt.len = m_buffer_index-1;
                 m_evt_handler(&m_evt);
                 
                 m_buffer_index = 0;
