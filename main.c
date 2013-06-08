@@ -1,18 +1,127 @@
-#include "nrf51.h"
+#include "nrf.h"
+#include "nrf_gpio.h"
+#include "boards.h"
 #include "uartreader.h"
+#include "hexparser.h"
 
-void uart_handler()
+#define UARTLOADER_SIZE 8192
+
+void init(void)
 {
-    /*switch (evt.type)
+    if (NRF_UICR->CLENR0 == 0xFFFFFFFF)
     {
-        case LINE_RECEIVED:
+        NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
+        NRF_UICR->CLENR0 = UARTLOADER_SIZE;
+        NRF_NVMC->CONFIG = 0;
+        NVIC_SystemReset();
+    }
+}
+
+void erase_app(void)
+{
+    uint32_t last_page_address = NRF_FICR->CODEPAGESIZE * NRF_FICR->CODESIZE;
+
+    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Een << NVMC_CONFIG_WEN_Pos;
+
+    for (uint32_t address = UARTLOADER_SIZE; address < last_page_address; address += NRF_FICR->CODEPAGESIZE)
+    {
+        NRF_NVMC->ERASEPAGE = address;
+        while (!NRF_NVMC->READY);
+    }
+
+    NRF_NVMC->CONFIG = 0x0;
+}
+
+void write_record(uint16_t base_address, hexparser_record * record)
+{
+    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
+
+    for (uint32_t i = 0; i < record->byte_count / 4; i++)
+    {
+        *(uint32_t *) (base_address << 4 | (record->address + (4*i))) = record->data.words[i];
+    }
+    
+    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos;
+}
+
+uartreader_response_t write_line(uartreader_evt_t * evt)
+{
+        nrf_gpio_pin_toggle(LED0);
+    uint16_t base_address = 0;
+    hexparser_record record;
+    hexparser_parse_string((char * ) evt->data, evt->len, &record);
+
+    if (!hexparser_is_record_valid(&record))
+    {
+        return INVALID_RECORD;
+    }
+
+    switch (record.type)
+    {
+        case EXTENDED_LINEAR_ADDRESS_RECORD:
+        nrf_gpio_pin_toggle(LED1);
+            base_address = record.data.words[0];
             break;
-    }*/
+
+        case DATA_RECORD:
+        nrf_gpio_pin_toggle(LED0);
+            write_record(base_address, &record);
+            break;
+
+        default:
+        nrf_gpio_pin_toggle(LED0);
+        nrf_gpio_pin_toggle(LED1);
+            break;
+    }
+
+
+
+    return SUCCESS;
+}
+void uart_handler(uartreader_evt_t * evt)
+{
+    uartreader_response_t result;
+    switch (evt->cmd)
+    {
+        case ERASE_APP:
+            erase_app();
+            uartreader_send_response(SUCCESS);
+            break;
+
+        case WRITE_LINE:
+            result = write_line(evt);
+            uartreader_send_response(SUCCESS);
+            break;
+
+        case RESET_AND_RUN:
+            uartreader_send_response(SUCCESS);
+            NVIC_SystemReset();
+            break;
+
+        case NOP:
+            uartreader_send_response(SUCCESS);
+            break;
+    }
 }
 
 int main(void)
 {
-    //uartreader_init();
+    nrf_gpio_cfg_output(LED0);
+    nrf_gpio_cfg_output(LED1);
+
+    init();
+
+    nrf_gpio_pin_set(LED0);
+
+    uartreader_init_t init;
+    init.baudrate = UART_BAUDRATE_BAUDRATE_Baud38400;
+    init.txd_pin_no = TX_PIN_NUMBER;
+    init.rxd_pin_no = RX_PIN_NUMBER;
+    init.cts_pin_no = CTS_PIN_NUMBER;
+    init.rts_pin_no = RTS_PIN_NUMBER;
+    init.hwfc = HWFC;
+    init.evt_handler = uart_handler;
+    uartreader_init(&init);
 
     while (1)
     {

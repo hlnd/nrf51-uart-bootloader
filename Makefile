@@ -1,42 +1,23 @@
-CPPUTEST_HOME = /home/omh/Projects/CppUTest-3.3/
+# List all source files the application uses.
+APPLICATION_SRCS = main.c $(wildcard src/*.c) hexparser.c
+# Use shell to find name of root folder. Possible but horrible to do in make.
+PROJECT_NAME = $(shell basename "$(realpath .)")
+
+DEVICE = NRF51
+BOARD = BOARD_PCA10001
+USE_S110 = 0
+
+LIBRARY_PATHS += inc/
+SOURCE_PATHS += src/
+
+LIBRARY_PATHS += ../libhexwriter/inc/
+SOURCE_PATHS += ../libhexwriter/src/
 
 SDK_PATH = ../nrf51/nrf51822/
+LIBRARY_PATHS += $(SDK_PATH)Include/ble/softdevice/
+CFLAGS = -O0 -g
 
-INCLUDE_PATHS += inc/
-INCLUDE_PATHS += src/
-INCLUDE_PATHS += $(SDK_PATH)Include/
-INCLUDE_PATHS += $(SDK_PATH)Include/gcc/
-INCLUDE_PATHS += $(SDK_PATH)Include/app_common/
-INCLUDE_PATHS += $(SDK_PATH)Include/ble/softdevice/
-INCLUDE_PATHS += $(CPPUTEST_HOME)include/
+FLASH_START_ADDRESS = 0x0
+GDB_PORT_NUMBER = 2331
 
-CPPFLAGS = -g $(addprefix -I, $(INCLUDE_PATHS)) -DNRF51
-CXXFLAGS = -include $(CPPUTEST_HOME)include/CppUTest/MemoryLeakDetectorNewMacros.h
-CFLAGS = -include $(CPPUTEST_HOME)include/CppUTest/MemoryLeakDetectorMallocMacros.h
-
-TARGET = all_tests
-
-SOURCES = $(wildcard src/*.c)
-OBJECTS = $(SOURCES:.c=.o)
-
-SOURCES_TESTS = $(wildcard tests/*.cpp)
-OBJECTS_TESTS = $(SOURCES_TESTS:.cpp=.o)
-
-LDFLAGS = -L$(CPPUTEST_HOME)lib/ -lCppUTest -lstdc++
-
-all: check
-
-rebuild: clean all
-
-check: $(TARGET)
-	./$(TARGET)
-
-clean: 
-	rm src/*.o
-	rm tests/*.o
-	rm $(TARGET)
-
-$(TARGET): $(OBJECTS) $(OBJECTS_TESTS)
-	$(CC) $^ -o $@ $(LDFLAGS)
-
-.PHONY: check clean rebuild all
+include $(SDK_PATH)Source/templates/pure-gcc/Makefile
