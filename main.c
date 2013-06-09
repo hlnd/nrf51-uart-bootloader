@@ -6,7 +6,7 @@
 
 #define UARTLOADER_SIZE 0x14000
 
-bool is_bootloader_running = true;
+volatile bool is_bootloader_running = true;
 
 typedef (*application_main_t)(void);
 application_main_t application_main = UARTLOADER_SIZE+4;
@@ -17,6 +17,7 @@ void init(void)
     {
         NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
         NRF_UICR->CLENR0 = UARTLOADER_SIZE;
+        while (!NRF_NVMC->READY);
         NRF_NVMC->CONFIG = 0;
         NVIC_SystemReset();
     }
@@ -129,6 +130,8 @@ int main(void)
         application_main();
         
     }
+
+    is_bootloader_running = true;
     nrf_gpio_pin_set(LED0);
 
     uartreader_init_t init;
