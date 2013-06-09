@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define UARTREADER_MAX_LEN 32
+#define UARTREADER_MAX_LEN 48
 
 typedef enum
 {
@@ -16,6 +16,7 @@ typedef enum
 typedef enum
 {
     SUCCESS = 0x01,
+    FAILURE = 0x02,
 } uartreader_response_t;
 
 typedef struct

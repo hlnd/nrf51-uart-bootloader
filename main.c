@@ -4,7 +4,12 @@
 #include "uartreader.h"
 #include "hexparser.h"
 
-#define UARTLOADER_SIZE 8192
+#define UARTLOADER_SIZE 0x14000
+
+bool is_bootloader_running = true;
+
+typedef (*application_main_t)(void);
+application_main_t application_main = UARTLOADER_SIZE+4;
 
 void init(void)
 {
@@ -39,6 +44,9 @@ void write_record(uint16_t base_address, hexparser_record * record)
     for (uint32_t i = 0; i < record->byte_count / 4; i++)
     {
         *(uint32_t *) (base_address << 4 | (record->address + (4*i))) = record->data.words[i];
+        while (NRF_NVMC->READY & (NVMC_READY_READY_Busy << NVMC_READY_READY_Pos))
+        {
+        }
     }
     
     NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos;
@@ -46,31 +54,32 @@ void write_record(uint16_t base_address, hexparser_record * record)
 
 uartreader_response_t write_line(uartreader_evt_t * evt)
 {
-        nrf_gpio_pin_toggle(LED0);
-    uint16_t base_address = 0;
+    nrf_gpio_pin_toggle(LED0);
+    static uint16_t base_address = 0;
     hexparser_record record;
     hexparser_parse_string((char * ) evt->data, evt->len, &record);
 
     if (!hexparser_is_record_valid(&record))
     {
-        return INVALID_RECORD;
+        return FAILURE;
     }
 
     switch (record.type)
     {
         case EXTENDED_LINEAR_ADDRESS_RECORD:
-        nrf_gpio_pin_toggle(LED1);
+        case EXTENDED_SEGMENT_ADDRESS_RECORD:
+            nrf_gpio_pin_toggle(LED1);
             base_address = record.data.words[0];
             break;
 
         case DATA_RECORD:
-        nrf_gpio_pin_toggle(LED0);
+            nrf_gpio_pin_toggle(LED0);
             write_record(base_address, &record);
             break;
 
         default:
-        nrf_gpio_pin_toggle(LED0);
-        nrf_gpio_pin_toggle(LED1);
+            nrf_gpio_pin_toggle(LED0);
+            nrf_gpio_pin_toggle(LED1);
             break;
     }
 
@@ -90,7 +99,7 @@ void uart_handler(uartreader_evt_t * evt)
 
         case WRITE_LINE:
             result = write_line(evt);
-            uartreader_send_response(SUCCESS);
+            uartreader_send_response(result);
             break;
 
         case RESET_AND_RUN:
@@ -108,9 +117,18 @@ int main(void)
 {
     nrf_gpio_cfg_output(LED0);
     nrf_gpio_cfg_output(LED1);
+    nrf_gpio_cfg_input(BUTTON0, NRF_GPIO_PIN_PULLUP);
 
     init();
 
+    application_main = *(uint32_t *) application_main;
+    if ((application_main != 0xFFFFFFFF) && 
+        (nrf_gpio_pin_read(BUTTON0) != 0))
+    {
+        is_bootloader_running = false;
+        application_main();
+        
+    }
     nrf_gpio_pin_set(LED0);
 
     uartreader_init_t init;
