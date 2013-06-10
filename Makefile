@@ -8,8 +8,10 @@ BOARD = BOARD_PCA10001
 #USE_S110 = 1
 
 START_CODE = bootloader_startup_nrf51.s
+
 LIBRARY_PATHS += inc/
 SOURCE_PATHS += src/
+SOURCE_PATHS += ./
 
 LIBRARY_PATHS += ../libhexwriter/inc/
 SOURCE_PATHS += ../libhexwriter/src/

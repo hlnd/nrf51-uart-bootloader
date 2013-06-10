@@ -66,6 +66,7 @@ __HeapLimit:
 \peripheral\()Vector :
     .long   \peripheral\()Wrapper
     .endm
+
     .section .isr_vector
     .align 2
     .globl __isr_vector
@@ -124,7 +125,6 @@ __isr_vector:
     .size    __isr_vector, . - __isr_vector
 
     .text
-    .equ BOOTLOADER_SIZE, 0x14000
     .thumb
     .thumb_func
     .align 2
@@ -198,6 +198,7 @@ Reset_Handler:
     .size    \handler_name, . - \handler_name
     .endm
     
+    .equ BOOTLOADER_SIZE, 0x14000
     def_default_handler    NMI_Handler
     def_wrapper HardFault_
     def_default_handler    HardFault_Handler

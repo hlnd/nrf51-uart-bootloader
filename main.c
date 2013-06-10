@@ -4,19 +4,18 @@
 #include "uartreader.h"
 #include "hexparser.h"
 
-#define UARTLOADER_SIZE 0x14000
+#define APPLICATION_BASE_ADDRESS 0x14000
 
 volatile bool is_bootloader_running = true;
 
-typedef (*application_main_t)(void);
-application_main_t application_main = UARTLOADER_SIZE+4;
+typedef void (*application_main_t)(void);
 
 void init(void)
 {
     if (NRF_UICR->CLENR0 == 0xFFFFFFFF)
     {
         NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos;
-        NRF_UICR->CLENR0 = UARTLOADER_SIZE;
+        NRF_UICR->CLENR0 = APPLICATION_BASE_ADDRESS;
         while (!NRF_NVMC->READY);
         NRF_NVMC->CONFIG = 0;
         NVIC_SystemReset();
@@ -29,7 +28,7 @@ void erase_app(void)
 
     NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Een << NVMC_CONFIG_WEN_Pos;
 
-    for (uint32_t address = UARTLOADER_SIZE; address < last_page_address; address += NRF_FICR->CODEPAGESIZE)
+    for (uint32_t address = APPLICATION_BASE_ADDRESS; address < last_page_address; address += NRF_FICR->CODEPAGESIZE)
     {
         NRF_NVMC->ERASEPAGE = address;
         while (!NRF_NVMC->READY);
@@ -122,8 +121,8 @@ int main(void)
 
     init();
 
-    application_main = *(uint32_t *) application_main;
-    if ((application_main != 0xFFFFFFFF) && 
+    application_main_t application_main = *(application_main_t *)(APPLICATION_BASE_ADDRESS+4);
+    if ((application_main != (application_main_t) 0xFFFFFFFF) && 
         (nrf_gpio_pin_read(BUTTON0) != 0))
     {
         is_bootloader_running = false;
